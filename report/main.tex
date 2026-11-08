@@ -6,7 +6,7 @@
 %   or upload the "report" folder to Overleaf and press Recompile.
 % Screenshots: drop PNG files into figures/ with the names listed in
 %   Appendix A; missing ones show as labelled placeholder boxes.
-% Before submitting: search for \fillin and replace every red placeholder.
+% All placeholders filled on 8 Nov 2026 from the live deployment.
 % ===========================================================================
 \documentclass[10pt,a4paper]{article}
 
@@ -36,7 +36,7 @@
 \newcommand{\fillin}[1]{\textcolor{red}{\textbf{[#1]}}}
 \newcommand{\student}{Ali Afzal (SE-23048)}
 \newcommand{\repourl}{\url{https://github.com/Woodenbowl000/occasionhub-cloud}}
-\newcommand{\appurl}{\fillin{http://occasionhub-public-alb-XXXX.ap-southeast-2.elb.amazonaws.com}}
+\newcommand{\appurl}{\url{http://occasionhub-public-alb-777768551.ap-southeast-2.elb.amazonaws.com}}
 
 % Screenshot evidence: the image if present, otherwise a placeholder box
 \newcommand{\evidence}[3]{%
@@ -337,14 +337,32 @@ After (batched query, parallel count) & 391--410 & 23--24 & 33--36 \\
 \end{tabularx}
 \end{table}
 
-\textbf{Automated deployment on AWS.} Pushing commit \fillin{short SHA} to
-\texttt{main} triggered pipeline run \fillin{\#run number}:
-test, e2e and the three image builds succeeded in \fillin{mm:ss}, and the
-rolling refresh of both ASGs took \fillin{mm:ss}. \texttt{/backend/health} then
-reported the new SHA, and the site answered at \appurl. Repeated requests showed
-the \texttt{X-Served-By} (web) and \texttt{X-App-Instance} (app) headers
-alternating between instances in both AZs, which confirms load balancing in each
-tier (Appendix~A).
+\textbf{Automated deployment on AWS (8 Nov 2026).} Pushing commit
+\texttt{e7f505a}, a visible change to the landing-page tagline, to
+\texttt{main} triggered pipeline run \#4 (Table~\ref{tab:run}). The first deploy
+attempt stopped at its pre-flight check after 12\,s because the
+\texttt{APP\_URL} repository variable was not yet set. No AWS resource was
+changed, so the safety check worked as designed. After the variable was added,
+re-running the failed job replaced all four instances with the new release while
+the site stayed up. \texttt{/backend/health} then reported \texttt{e7f505a} at
+\appurl{} (taken down after evaluation to save cost). Of 24 consecutive requests,
+the two web instances answered 12 and 12 (\texttt{X-Served-By}) and the two app
+instances 13 and 11 (\texttt{X-App-Instance}), which confirms load balancing in
+both tiers (Figures~\ref{fig:gha}--\ref{fig:app}).
+
+\begin{table}[H]\centering\small
+\caption{Pipeline run \#4 for commit \texttt{e7f505a} (GitHub Actions).}\label{tab:run}
+\begin{tabularx}{\linewidth}{@{}L l r@{}}
+\toprule
+Job & Result & Duration (m:ss) \\
+\midrule
+Test API against PostgreSQL + PostGIS & passed & 0:43 \\
+Build all images + end-to-end smoke test (docker compose) & passed & 2:06 \\
+Build \& push server / client / proxy (in parallel) & passed & 0:28 / 1:33 / 0:31 \\
+Deploy: release pointer, rolling refresh of both ASGs, smoke test & passed & 6:54 \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 % ===========================================================================
 \section{Non-functional requirements}\label{sec:nfr}
@@ -385,18 +403,22 @@ is a configuration change, not a redesign.
 \section*{Appendix A: Deployment evidence}
 \addcontentsline{toc}{section}{Appendix A: Deployment evidence}
 % ===========================================================================
-\evidence{aws-vpc-subnets.png}{VPC \texttt{occasionhub-vpc} with its eight subnets across two AZs (VPC console, Subnets).}{fig:vpc}
-\evidence{aws-route-tables.png}{Route tables: public $\rightarrow$ IGW, private $\rightarrow$ NAT and S3 endpoint, database isolated.}{fig:rt}
-\evidence{aws-ec2-instances.png}{EC2 instances: two web and two app instances, running in two AZs, no public IPs.}{fig:ec2}
+All figures were captured on 8 Nov 2026 from the live deployment in the AWS
+Management Console (\texttt{ap-southeast-2}), the public GitHub Actions run and
+the live site.
+
+\evidence{aws-vpc-subnets.png}{VPC \texttt{occasionhub-vpc} with its eight subnets across two AZs.}{fig:vpc}
+\evidence{aws-route-tables.png}{Route tables: one public, one private per AZ and one isolated database table, each associated with two subnets.}{fig:rt}
+\evidence{aws-ec2-instances.png}{EC2 instances: two web and two app instances running in two AZs, all status checks passed, no public IPv4 address.}{fig:ec2}
 \evidence{aws-asg.png}{Auto Scaling Groups \texttt{occasionhub-web-asg} and \texttt{occasionhub-app-asg} with target-tracking policies.}{fig:asg}
-\evidence{aws-security-groups.png}{Security groups, showing the inbound rules of \texttt{occasionhub-app-sg} and \texttt{occasionhub-db-sg}.}{fig:sg}
-\evidence{aws-load-balancers.png}{Public and internal ALBs; target groups with all targets healthy.}{fig:alb}
-\evidence{aws-rds.png}{RDS instance \texttt{occasionhub-db}: private, encrypted, in the DB subnet group.}{fig:rds}
-\evidence{aws-ecr.png}{ECR repositories with images tagged by commit SHA.}{fig:ecr}
-\evidence{github-actions-run.png}{Successful GitHub Actions run: test, e2e, build-push (3 images) and deploy.}{fig:gha}
-\evidence{aws-app-browser.png}{OccasionHub served from the public ALB address in a browser.}{fig:app}
-\evidence{aws-cloudwatch-dashboard.png}{CloudWatch dashboard \texttt{occasionhub-overview}.}{fig:cw}
-\evidence{aws-budget.png}{AWS Budgets billing alert \texttt{occasionhub-monthly-budget}.}{fig:budget}
+\evidence{aws-security-groups.png}{Security group \texttt{occasionhub-db-sg}: one inbound rule (PostgreSQL 5432, from the application tier only) and no outbound rules.}{fig:sg}
+\evidence{aws-load-balancers.png}{Target group \texttt{occasionhub-web-tg} behind the public ALB: both web instances healthy after the rolling deploy.}{fig:alb}
+\evidence{aws-rds.png}{RDS instance \texttt{occasionhub-db}: PostgreSQL on db.t4g.micro, available, internet access gateway disabled.}{fig:rds}
+\evidence{aws-ecr.png}{ECR repository \texttt{occasionhub/server}: one image per release, tagged with the git commit SHA (\texttt{7164af8}, \texttt{e7f505a}).}{fig:ecr}
+\evidence{github-actions-run.png}{GitHub Actions run \#4: every job green (the deploy job shown after its re-run).}{fig:gha}
+\evidence{aws-app-browser.png}{OccasionHub served through the public ALB after the automated deployment: the tagline now ends ``now on AWS''.}{fig:app}
+\evidence{aws-cloudwatch-dashboard.png}{CloudWatch dashboard \texttt{occasionhub-overview}: requests, latency, CPU by tier and instances in service. The dips at 16:25 are the rolling deploy.}{fig:cw}
+\evidence{aws-budget.png}{AWS Budgets: \texttt{occasionhub-monthly-budget} (USD 25 per month), status OK.}{fig:budget}
 
 \textbf{Local deployment (docker compose / local stack), captured on \today:}
 \evidence{local-venues.png}{Venue search page served through the Nginx web tier, with data from the API and the PostGIS database.}{fig:localvenues}
