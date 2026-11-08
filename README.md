@@ -73,7 +73,9 @@ All commands below are for **PowerShell** on Windows. Open a **new** PowerShell 
 3. Terraform's AWS provider cannot read `aws login` sessions directly yet, so add a wrapper profile that asks the AWS CLI for them:
    ```powershell
    aws configure set region ap-southeast-2 --profile occasionhub-terraform
-   aws configure set credential_process "$((Get-Command aws).Source) configure export-credentials --profile occasionhub --format process" --profile occasionhub-terraform
+   # Short (8.3) path: Terraform runs this through cmd.exe, which cannot handle the space in "Program Files"
+   $awsExe = (New-Object -ComObject Scripting.FileSystemObject).GetFile((Get-Command aws).Source).ShortPath
+   aws configure set credential_process "$awsExe configure export-credentials --profile occasionhub --format process" --profile occasionhub-terraform
    aws sts get-caller-identity --profile occasionhub-terraform
    ```
 4. Everything deploys to **ap-southeast-2 (Sydney)**, the Region of your AWS project.
