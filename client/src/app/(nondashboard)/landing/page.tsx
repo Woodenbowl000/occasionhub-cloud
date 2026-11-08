@@ -214,7 +214,7 @@ export default function LandingPage() {
         <div className="relative mx-auto max-w-[1440px] px-5 sm:px-8 lg:px-12">
           <div className="flex justify-center">
             <span className="relative rounded-xl bg-forest px-4 py-1.5 font-display text-sm uppercase tracking-[0.12em] text-lime">
-              Venue booking, made fun
+              Venue booking, made fun · now on AWS
             </span>
           </div>
 
