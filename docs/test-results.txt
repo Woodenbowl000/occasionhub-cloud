@@ -1,0 +1,36 @@
+
+> server@1.0.0 test
+> node --require ts-node/register --test tests/api.test.ts
+
+▶ liveness
+  ✔ GET /health returns ok with instance and version (138.2908ms)
+  ✔ responses name the serving instance and hide the framework (20.3778ms)
+::ffff:127.0.0.1 - - [08/Nov/2026:13:24:44 +0000] "GET / HTTP/1.1" 200 40
+  ✔ GET / reports the API is running (40.1728ms)
+✔ liveness (202.5336ms)
+▶ integration (database)
+  ✔ GET /ready reports the database is reachable (236.911ms)
+::ffff:127.0.0.1 - - [08/Nov/2026:13:24:44 +0000] "GET /venues?limit=5 HTTP/1.1" 200 -
+  ✔ GET /venues returns approved venues with coordinates (121.5685ms)
+::ffff:127.0.0.1 - - [08/Nov/2026:13:24:44 +0000] "GET /venues?limit=20 HTTP/1.1" 200 -
+  ✔ venue list responses are gzip-compressed (39.0385ms)
+::ffff:127.0.0.1 - - [08/Nov/2026:13:24:44 +0000] "GET /venues?limit=5000&sortBy=password HTTP/1.1" 200 -
+  ✔ page size is capped and unknown sort fields are ignored (22.7424ms)
+::ffff:127.0.0.1 - - [08/Nov/2026:13:24:44 +0000] "GET /venues?userLat=33.7&userLon=73.0&sortBy=distance&sortOrder=asc HTTP/1.1" 200 -
+  ✔ distance sort orders venues nearest first (27.9685ms)
+::ffff:127.0.0.1 - - [08/Nov/2026:13:24:44 +0000] "GET /venues?city=islamabad HTTP/1.1" 200 -
+::ffff:127.0.0.1 - - [08/Nov/2026:13:24:44 +0000] "GET /venues?city=ISLAMABAD HTTP/1.1" 200 -
+  ✔ city search is case-insensitive (41.5498ms)
+::ffff:127.0.0.1 - - [08/Nov/2026:13:24:45 +0000] "POST /auth/signin HTTP/1.1" 200 451
+  ✔ seeded admin can sign in and receives a JWT (283.5493ms)
+::ffff:127.0.0.1 - - [08/Nov/2026:13:24:45 +0000] "POST /auth/signin HTTP/1.1" 401 33
+  ✔ wrong password is rejected (215.1637ms)
+✔ integration (database) (990.9675ms)
+ℹ tests 11
+ℹ suites 2
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 19771.9993

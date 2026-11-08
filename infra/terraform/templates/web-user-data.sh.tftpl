@@ -1,0 +1,60 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# Web tier bootstrap (rendered by Terraform, runs once at first boot).
+# Starts two containers on a private Docker network:
+#   client - Next.js front end (port 3000, not published)
+#   proxy  - Nginx, published on host port 80 for the public ALB
+# ---------------------------------------------------------------------------
+set -euo pipefail
+exec > >(tee -a /var/log/occasionhub-bootstrap.log) 2>&1
+
+REGION="${region}"
+REGISTRY="${registry}"
+
+retry() { # retry <attempts> <command...>: tolerate a NAT/endpoint that is still warming up
+  local n=$1; shift
+  for i in $(seq 1 "$n"); do "$@" && return 0; echo "attempt $i failed: $*" >&2; sleep 10; done
+  return 1
+}
+
+dnf install -y docker jq
+systemctl enable --now docker
+
+IMDS_TOKEN=$(curl -sX PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+meta() { curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" "http://169.254.169.254/latest/meta-data/$1"; }
+INSTANCE_ID=$(meta instance-id)
+
+# Release pointer written by the CI/CD pipeline
+TAG=$(retry 6 aws ssm get-parameter --region "$REGION" --name "${image_tag_param}" --query Parameter.Value --output text)
+echo "deploying image tag $TAG"
+
+retry 6 sh -c "aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $REGISTRY"
+
+# Front-end secrets -> root-only env file (never baked into the image)
+install -d -m 700 /etc/occasionhub
+aws secretsmanager get-secret-value --region "$REGION" --secret-id "${web_secret_arn}" \
+  --query SecretString --output text | jq -r 'to_entries[] | "\(.key)=\(.value)"' > /etc/occasionhub/client.env
+chmod 600 /etc/occasionhub/client.env
+
+retry 6 docker pull "$REGISTRY/${project}/client:$TAG"
+retry 6 docker pull "$REGISTRY/${project}/proxy:$TAG"
+
+docker network create web || true
+
+docker run -d --name client --restart always --network web \
+  --hostname "$INSTANCE_ID" \
+  --env-file /etc/occasionhub/client.env \
+  --log-driver awslogs --log-opt awslogs-region="$REGION" \
+  --log-opt awslogs-group="${log_group}" --log-opt awslogs-stream="$INSTANCE_ID/client" \
+  "$REGISTRY/${project}/client:$TAG"
+
+docker run -d --name proxy --restart always --network web \
+  --hostname "$INSTANCE_ID" -p 80:8080 \
+  -e CLIENT_UPSTREAM=client:3000 \
+  -e API_UPSTREAM="${api_upstream}" \
+  -e NGINX_RESOLVER=127.0.0.11 \
+  --log-driver awslogs --log-opt awslogs-region="$REGION" \
+  --log-opt awslogs-group="${log_group}" --log-opt awslogs-stream="$INSTANCE_ID/proxy" \
+  "$REGISTRY/${project}/proxy:$TAG"
+
+echo "web tier ready on $INSTANCE_ID with tag $TAG"

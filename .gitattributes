@@ -1,0 +1,5 @@
+# Keep Unix line endings: the boot scripts, shell scripts, Dockerfiles and
+# Nginx config run on Linux, where CRLF breaks them.
+* text=auto eol=lf
+*.png binary
+*.pdf binary

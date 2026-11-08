@@ -1,0 +1,44 @@
+# Dependencies / build output
+node_modules/
+dist/
+dist-seed/
+.next/
+out/
+*.tsbuildinfo
+server/.bench/
+
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+*.tfvars
+!*.tfvars.example
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+*.log
+*.tfplan
+
+# Local uploads
+server/uploads/
+
+# LaTeX build files
+report/*.aux
+report/*.log
+report/*.out
+report/*.toc
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+
+# Local AI-assistant rules (AWS Agent Toolkit), not part of the project
+CLAUDE.md
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

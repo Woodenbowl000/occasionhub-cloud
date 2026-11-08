@@ -1,0 +1,294 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Paper cream + forest green, with acid lime as the loud accent */
+    --background: 48 63% 92%;
+    --foreground: 123 62% 14%;
+    --card: 50 90% 97%;
+    --card-foreground: 123 62% 14%;
+    --popover: 50 90% 97%;
+    --popover-foreground: 123 62% 14%;
+    --primary: 123 62% 15%;
+    --primary-foreground: 77 100% 56%;
+    --secondary: 48 45% 84%;
+    --secondary-foreground: 123 62% 14%;
+    --muted: 48 45% 86%;
+    --muted-foreground: 123 22% 30%;
+    --accent: 77 100% 56%;
+    --accent-foreground: 123 62% 14%;
+    --destructive: 2 75% 48%;
+    --destructive-foreground: 50 90% 97%;
+    --border: 60 22% 74%;
+    --input: 70 20% 62%;
+    --ring: 123 62% 22%;
+    --radius: 1.25rem;
+    --chart-1: 123 62% 22%;
+    --chart-2: 77 100% 45%;
+    --chart-3: 25 100% 55%;
+    --chart-4: 330 100% 72%;
+    --chart-5: 203 100% 65%;
+    --sticker-shadow: #0e3b10;
+  }
+
+  .dark {
+    --background: 124 62% 9%;
+    --foreground: 50 80% 92%;
+    --card: 124 50% 12%;
+    --card-foreground: 50 80% 92%;
+    --popover: 124 50% 12%;
+    --popover-foreground: 50 80% 92%;
+    --primary: 77 100% 56%;
+    --primary-foreground: 123 62% 12%;
+    --secondary: 124 40% 16%;
+    --secondary-foreground: 50 80% 92%;
+    --muted: 124 40% 15%;
+    --muted-foreground: 70 30% 72%;
+    --accent: 77 100% 56%;
+    --accent-foreground: 123 62% 12%;
+    --destructive: 2 80% 60%;
+    --destructive-foreground: 50 80% 96%;
+    --border: 124 32% 22%;
+    --input: 124 28% 28%;
+    --ring: 77 100% 56%;
+    --chart-1: 77 100% 56%;
+    --chart-2: 50 80% 85%;
+    --chart-3: 25 100% 60%;
+    --chart-4: 330 100% 75%;
+    --chart-5: 203 100% 70%;
+    --sticker-shadow: #9be000;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    transition: background-color 0.4s ease, color 0.4s ease;
+  }
+  h1,
+  h2 {
+    @apply font-display uppercase;
+    letter-spacing: 0.005em;
+    /* Anton ships one weight/style; never fake bold or italic */
+    font-synthesis: none;
+  }
+  /* Emphasised words in headings get a hand-drawn marker swoosh */
+  h1 .italic,
+  h2 .italic {
+    font-style: normal;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' preserveAspectRatio='none'%3E%3Cpath d='M2 14 C 40 4, 80 18, 120 9 S 180 6, 198 12' fill='none' stroke='%23C2FF1F' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 100% 0.32em;
+    background-position: 0 92%;
+    padding: 0 0.04em;
+  }
+  ::selection {
+    background: #c2ff1f;
+    color: #0e3b10;
+  }
+  :focus-visible {
+    outline: 3px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  input,
+  select,
+  textarea {
+    @apply bg-background text-foreground;
+    accent-color: hsl(var(--primary));
+  }
+}
+
+@layer components {
+  /* Small condensed label used above headings */
+  .eyebrow {
+    @apply font-display text-[13px] uppercase tracking-[0.12em] text-muted-foreground;
+  }
+  /* Handwritten note */
+  .note {
+    @apply font-hand text-lg leading-snug normal-case tracking-normal;
+  }
+
+  /* Shared form field */
+  .field {
+    @apply block w-full rounded-2xl border-2 border-foreground/80 bg-card px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/70 transition-[box-shadow,transform] duration-200 focus:outline-none focus:shadow-sticker-sm focus:-translate-x-px focus:-translate-y-px;
+  }
+  .field-label {
+    @apply mb-1.5 block font-display text-[13px] uppercase tracking-[0.1em] text-foreground/80;
+  }
+
+  /* Chunky sticker buttons that press down when clicked */
+  .btn {
+    @apply relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-foreground px-6 py-3 font-display text-[15px] uppercase tracking-[0.06em] shadow-sticker-sm transition-[transform,box-shadow,background-color,color] duration-150 hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-sticker active:translate-x-[3px] active:translate-y-[4px] active:shadow-none disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-primary-foreground;
+  }
+  .btn-accent {
+    @apply btn bg-lime text-forest;
+  }
+  .btn-ghost {
+    @apply btn bg-card text-foreground;
+  }
+
+  /* Underline that draws in on hover */
+  .link-underline {
+    @apply relative inline-block;
+  }
+  .link-underline::after {
+    content: "";
+    @apply absolute -bottom-0.5 left-0 h-[2px] w-full origin-right scale-x-0 bg-current transition-transform duration-500 ease-expo;
+  }
+  .link-underline:hover::after {
+    @apply origin-left scale-x-100;
+  }
+
+  /* Masked line used by text reveals */
+  .reveal-line {
+    @apply block overflow-hidden pb-[0.04em];
+  }
+  .reveal-line > span {
+    @apply inline-block will-change-transform;
+  }
+
+  /* Sticker: thick border, offset solid shadow, slight tilt via --tilt */
+  .sticker {
+    @apply rounded-[1.75rem] border-[3px] border-forest shadow-sticker;
+    transform: rotate(var(--tilt, 0deg));
+  }
+
+  /* Translucent masking-tape strip with torn ends */
+  .tape {
+    @apply pointer-events-none absolute z-10 h-7 w-20 sm:h-9 sm:w-28;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.35),
+        rgba(255, 255, 255, 0) 40%,
+        rgba(0, 0, 0, 0.04)
+      ),
+      rgba(231, 219, 172, 0.82);
+    box-shadow: 0 2px 6px rgba(40, 30, 0, 0.18);
+    transform: rotate(var(--tilt, -6deg));
+    clip-path: polygon(
+      0 8%, 4% 0, 8% 10%, 12% 2%, 16% 9%, 20% 1%, 80% 0, 84% 9%, 88% 1%, 92% 10%, 96% 2%, 100% 9%,
+      100% 92%, 96% 100%, 92% 90%, 88% 99%, 84% 91%, 80% 100%, 20% 100%, 16% 91%, 12% 99%, 8% 90%, 4% 98%, 0 91%
+    );
+  }
+
+  /* Brown kraft card */
+  .kraft {
+    background-color: #c99b6a;
+    background-image: radial-gradient(rgba(70, 40, 10, 0.18) 1px, transparent 1.5px),
+      radial-gradient(rgba(255, 240, 210, 0.2) 1px, transparent 1.5px);
+    background-size: 7px 7px, 11px 11px;
+    background-position: 0 0, 3px 5px;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
+
+/* Crumpled-paper texture: fractal noise lit from one side. Laid over the
+   whole page in multiply mode so every colour block looks like paper. */
+.paper-texture {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='700'%3E%3Cfilter id='p' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.011' numOctaves='5' seed='7' stitchTiles='stitch'/%3E%3CfeDiffuseLighting lighting-color='%23ffffff' surfaceScale='2.2'%3E%3CfeDistantLight azimuth='225' elevation='58'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+  background-size: 700px 700px;
+  mix-blend-mode: multiply;
+}
+
+/* Dashboard pages (user / vendor / admin) ------------------------------ */
+.dash-main h1 {
+  font-size: clamp(2.5rem, 5vw, 4.25rem);
+  line-height: 0.92;
+}
+.dash-main h1 + p {
+  margin-top: 0.75rem;
+}
+.dash-main > * > * {
+  animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.dash-main > * > *:nth-child(2) { animation-delay: 60ms; }
+.dash-main > * > *:nth-child(3) { animation-delay: 120ms; }
+.dash-main > * > *:nth-child(4) { animation-delay: 180ms; }
+.dash-main > * > *:nth-child(5) { animation-delay: 240ms; }
+.dash-main > * > *:nth-child(n + 6) { animation-delay: 300ms; }
+.dash-main > * > .fixed {
+  animation: none;
+}
+.dash-main table thead th {
+  @apply font-display text-[13px] font-normal uppercase tracking-[0.1em];
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Lenis smooth scroll */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+/* Theme toggle circular wipe (see useTheme) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Mapbox */
+.mapboxgl-popup-content {
+  @apply rounded-2xl border-[3px] border-forest;
+  padding: 0 !important;
+  max-width: 260px;
+  overflow: hidden;
+}
+.venue-popup .mapboxgl-popup-content {
+  background: #fbf6e3;
+  box-shadow: 5px 6px 0 #0e3b10;
+}
+.venue-popup .mapboxgl-popup-tip {
+  border-top-color: #0e3b10 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

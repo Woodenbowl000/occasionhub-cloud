@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-seed
+uploads
+.env
+.env.*
+!.env.example
+*.log
+api
+vercel.json
+prisma/seed.ts.backup

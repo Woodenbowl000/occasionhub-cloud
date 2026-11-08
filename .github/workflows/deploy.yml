@@ -1,0 +1,208 @@
+# ---------------------------------------------------------------------------
+# OccasionHub CI/CD
+#
+#   pull request ─► test ─► e2e (compose smoke test)
+#   push to main ─► test ─► e2e ─► build & push 3 images to ECR ─► rolling deploy
+#
+# AWS access (see infra/terraform/cicd.tf):
+#  - default: a deploy-only IAM user. Its keys are encrypted *environment
+#    secrets* of the "production" environment, which is restricted to the main
+#    branch, so pull requests and other branches can never read them:
+#      AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+#  - optional: keyless OIDC. Set the variable AWS_ROLE_ARN and no keys are needed.
+#
+# Repository variables (Settings ▸ Secrets and variables ▸ Actions ▸ Variables):
+#   AWS_REGION (enables the AWS jobs), APP_URL (after the first full apply)
+# Optional: NEXT_PUBLIC_MAPBOX_TOKEN, NEXT_PUBLIC_GOOGLE_CLIENT_ID (public by design)
+# ---------------------------------------------------------------------------
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PROJECT: occasionhub
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-southeast-2' }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  # -------------------------------------------------------------------------
+  test:
+    name: Test API against PostgreSQL + PostGIS
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: occasionhub_test
+          POSTGRES_USER: ci
+          # Throwaway database that exists only inside this CI job: not a real secret
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci -d occasionhub_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://ci:ci-only-password@localhost:5432/occasionhub_test
+      DATABASE_URL_UNPOOLED: postgresql://ci:ci-only-password@localhost:5432/occasionhub_test
+      JWT_SECRET: ci-only-jwt-secret
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Type-check (app + seed)
+        run: npm run typecheck
+
+      - name: Apply database migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed test data
+        run: npx tsc -p tsconfig.seed.json && node dist-seed/seed.js
+
+      - name: Run API tests
+        run: npm test
+
+  # -------------------------------------------------------------------------
+  e2e:
+    name: Build all images + end-to-end smoke test
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create a throwaway .env (random values, discarded with the runner)
+        run: |
+          cp .env.example .env
+          sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(openssl rand -hex 16)/" .env
+          sed -i "s/^JWT_SECRET=.*/JWT_SECRET=$(openssl rand -hex 32)/" .env
+
+      - name: Build and start the three tiers (docker compose)
+        run: docker compose up -d --build --wait --wait-timeout 420
+
+      - name: Smoke test through the Nginx web tier
+        run: |
+          set -x
+          curl -fsS http://localhost:8080/healthz
+          curl -fsS http://localhost:8080/backend/health | jq -e '.status == "ok"'
+          curl -fsS "http://localhost:8080/backend/venues?limit=3" | jq -e '.venues | length > 0'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/venues)" = "200"
+          docker compose ps
+
+      - name: Container logs (on failure)
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
+  # -------------------------------------------------------------------------
+  build-push:
+    name: Build & push ${{ matrix.image }} image
+    needs: [test, e2e]
+    if: github.event_name != 'pull_request' && vars.AWS_REGION != ''
+    runs-on: ubuntu-latest
+    environment: production # the AWS secrets live here (main branch only)
+    permissions:
+      contents: read
+      id-token: write # only used in OIDC mode
+    strategy:
+      fail-fast: true
+      matrix:
+        image: [server, client, proxy]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to AWS (deploy-only identity)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Skip if this commit's image already exists (tags are immutable)
+        id: exists
+        run: |
+          if aws ecr describe-images --repository-name "$PROJECT/${{ matrix.image }}" \
+               --image-ids imageTag="$IMAGE_TAG" >/dev/null 2>&1; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.exists.outputs.found != 'true'
+
+      - name: Build and push
+        if: steps.exists.outputs.found != 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.image }}
+          push: true
+          provenance: false
+          tags: ${{ steps.ecr.outputs.registry }}/${{ env.PROJECT }}/${{ matrix.image }}:${{ env.IMAGE_TAG }}
+          build-args: |
+            APP_VERSION=${{ env.IMAGE_TAG }}
+            NEXT_PUBLIC_API_URL=/backend
+            NEXT_PUBLIC_MAPBOX_TOKEN=${{ vars.NEXT_PUBLIC_MAPBOX_TOKEN }}
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+      - name: Registry listing
+        run: |
+          aws ecr describe-images --repository-name "$PROJECT/${{ matrix.image }}" \
+            --query 'sort_by(imageDetails,&imagePushedAt)[-5:].{tag:imageTags[0],pushed:imagePushedAt,sizeMB:imageSizeInBytes}' \
+            --output table
+
+  # -------------------------------------------------------------------------
+  deploy:
+    name: Deploy to AWS (rolling instance refresh)
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+    permissions:
+      contents: read
+      id-token: write # only used in OIDC mode
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to AWS (deploy-only identity)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+
+      - name: Publish new tag, roll both tiers, smoke test (auto-rollback on failure)
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+        run: bash scripts/deploy.sh

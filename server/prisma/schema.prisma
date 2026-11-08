@@ -1,0 +1,216 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+  // "native" for local dev; debian-openssl-3.0.x for the node:22-bookworm-slim container image
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  // Neon: pooled connection for the app, direct connection for migrations
+  url        = env("DATABASE_URL")
+  directUrl  = env("DATABASE_URL_UNPOOLED")
+  extensions = [postgis, pg_trgm]
+}
+
+enum UserRole {
+  USER
+  VENDOR
+  ADMIN
+}
+
+enum VenueType {
+  ConferenceCenter
+  BanquetHall
+  OutdoorSpace
+  Hotel
+  Restaurant
+  Theater
+  Gallery
+  Rooftop
+}
+
+enum BookingStatus {
+  Pending
+  Confirmed
+  Cancelled
+  Completed
+}
+
+enum ApplicationStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  // Null for accounts created with Google that never set a password
+  password  String?
+  googleId  String?  @unique
+  name      String
+  phone     String?
+  role      UserRole @default(USER)
+  isVendor  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // SHA-256 of the emailed reset token; the raw token is never stored
+  passwordResetToken   String?   @unique
+  passwordResetExpires DateTime?
+  // Tokens issued before this are rejected (signs out other sessions)
+  passwordChangedAt    DateTime?
+
+  venues              Venue[]
+  bookings            Booking[]
+  favorites           Favorite[]
+  vendorApplication   VendorApplication?
+  sentMessages        BookingMessage[]
+}
+
+model Venue {
+  id                Int         @id @default(autoincrement())
+  name              String
+  description       String
+  pricePerDay       Float
+  minPrice          Float?
+  maxPrice          Float?
+  capacity          Int
+  minCapacity       Int?
+  maxCapacity       Int?
+  photoUrls         String[]
+  amenities         String[]
+  venueType         VenueType
+  isAvailable       Boolean     @default(true)
+  isApproved        Boolean     @default(false)
+  rating            Float?      @default(0)
+  numberOfReviews   Int?        @default(0)
+  views             Int         @default(0)
+  postedDate        DateTime    @default(now())
+  locationId        Int
+  vendorId          Int
+
+  location Location  @relation(fields: [locationId], references: [id])
+  vendor   User      @relation(fields: [vendorId], references: [id])
+  bookings Booking[]
+  favorites Favorite[]
+  venueViews VenueView[]
+
+  @@index([venueType])
+  @@index([pricePerDay])
+  @@index([capacity])
+  @@index([vendorId])
+  @@index([isApproved])
+  @@index([locationId])
+  @@index([isApproved, isAvailable, postedDate])
+}
+
+model Location {
+  id          Int                                   @id @default(autoincrement())
+  address     String
+  city        String
+  state       String
+  country     String
+  postalCode  String
+  coordinates Unsupported("geography(Point, 4326)")
+
+  venues Venue[]
+
+  // Trigram index for case-insensitive "contains" city search.
+  // A GIST index on coordinates also exists (see migration 20261108000000).
+  @@index([city(ops: raw("gin_trgm_ops"))], map: "Location_city_trgm_idx", type: Gin)
+}
+
+model Booking {
+  id            Int           @id @default(autoincrement())
+  startDateTime DateTime
+  endDateTime   DateTime
+  totalPrice    Float
+  status        BookingStatus @default(Pending)
+  message       String?
+  createdAt     DateTime      @default(now())
+  venueId       Int
+  userId        Int
+  
+  customization Json?
+  negotiatedPrice Float?
+  
+  paymentStatus    String?      @default("unpaid")
+  stripeSessionId  String?
+  paidAmount       Float?
+  platformFee      Float?
+  vendorPayout     Float?
+  paidAt           DateTime?
+  
+  venue Venue @relation(fields: [venueId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  messages BookingMessage[]
+
+  @@index([userId])
+  @@index([venueId])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model BookingMessage {
+  id        Int      @id @default(autoincrement())
+  bookingId Int
+  senderId  Int
+  message   String
+  createdAt DateTime @default(now())
+  isRead    Boolean  @default(false)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sender  User    @relation(fields: [senderId], references: [id])
+
+  @@index([bookingId])
+  @@index([senderId])
+}
+
+model Favorite {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  userId    Int
+  venueId   Int
+
+  user  User  @relation(fields: [userId], references: [id])
+  venue Venue @relation(fields: [venueId], references: [id])
+
+  @@unique([userId, venueId])
+  @@index([venueId])
+}
+
+model VendorApplication {
+  id               Int               @id @default(autoincrement())
+  businessName     String
+  businessType     String
+  description      String
+  phone            String
+  website          String?
+  proofUrl         String?
+  yearsOfExperience Int
+  status           ApplicationStatus @default(Pending)
+  rejectionReason  String?
+  createdAt        DateTime          @default(now())
+  reviewedAt       DateTime?
+  userId           Int               @unique
+  reviewedBy       Int?
+
+  user     User  @relation(fields: [userId], references: [id])
+
+  @@index([status])
+}
+
+model VenueView {
+  id        Int      @id @default(autoincrement())
+  venueId   Int
+  userId    Int?
+  viewedAt  DateTime @default(now())
+  ipAddress String?
+
+  venue Venue @relation(fields: [venueId], references: [id])
+
+  @@index([venueId])
+  @@index([viewedAt])
+}

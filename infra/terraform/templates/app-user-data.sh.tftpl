@@ -1,0 +1,53 @@
+#!/bin/bash
+# ---------------------------------------------------------------------------
+# Application tier bootstrap (rendered by Terraform, runs once at first boot).
+# Starts the Express API container on port 3002 for the internal ALB.
+# The container reads its database and app secrets from Secrets Manager
+# itself, using this instance's IAM role: no secret is written to disk here.
+# ---------------------------------------------------------------------------
+set -euo pipefail
+exec > >(tee -a /var/log/occasionhub-bootstrap.log) 2>&1
+
+REGION="${region}"
+REGISTRY="${registry}"
+
+retry() {
+  local n=$1; shift
+  for i in $(seq 1 "$n"); do "$@" && return 0; echo "attempt $i failed: $*" >&2; sleep 10; done
+  return 1
+}
+
+dnf install -y docker
+systemctl enable --now docker
+
+IMDS_TOKEN=$(curl -sX PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
+meta() { curl -s -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" "http://169.254.169.254/latest/meta-data/$1"; }
+INSTANCE_ID=$(meta instance-id)
+AZ=$(meta placement/availability-zone)
+
+TAG=$(retry 6 aws ssm get-parameter --region "$REGION" --name "${image_tag_param}" --query Parameter.Value --output text)
+echo "deploying image tag $TAG"
+
+retry 6 sh -c "aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $REGISTRY"
+retry 6 docker pull "$REGISTRY/${project}/server:$TAG"
+
+docker run -d --name server --restart always \
+  --hostname "$INSTANCE_ID" -p 3002:3002 \
+  -e NODE_ENV=production \
+  -e PORT=3002 \
+  -e AWS_REGION="$REGION" \
+  -e DB_SECRET_ARN="${db_secret_arn}" \
+  -e APP_SECRET_ARN="${app_secret_arn}" \
+  -e DB_POOL_SIZE=5 \
+  -e S3_BUCKET="${uploads_bucket}" \
+  -e PUBLIC_API_URL=/backend \
+  -e CLIENT_URL="${client_url}" \
+  -e TRUST_PROXY=3 \
+  -e SEED_DEMO_DATA="${seed_demo_data}" \
+  -e APP_VERSION="$TAG" \
+  -e INSTANCE_AZ="$AZ" \
+  --log-driver awslogs --log-opt awslogs-region="$REGION" \
+  --log-opt awslogs-group="${log_group}" --log-opt awslogs-stream="$INSTANCE_ID/server" \
+  "$REGISTRY/${project}/server:$TAG"
+
+echo "app tier ready on $INSTANCE_ID with tag $TAG"

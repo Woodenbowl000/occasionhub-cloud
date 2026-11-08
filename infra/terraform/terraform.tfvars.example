@@ -1,0 +1,41 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+
+# Required
+github_repo = "your-github-username/occasionhub-cloud" # owner/name of YOUR repository
+alert_email = "you@example.com"                        # alarms + billing alerts
+
+# Billing alert threshold (USD per month)
+monthly_budget_usd = 25
+
+# Region: must be the Region your AWS project was created in (Sydney)
+aws_region = "ap-southeast-2"
+
+# Terraform signs in through this credential_process wrapper of the
+# `aws login --profile occasionhub` session (README step 2.1)
+aws_profile = "occasionhub-terraform"
+
+# CI/CD login: "access_key" (deploy-only IAM user, default) or "oidc"
+# (keyless; needs an account that allows IAM identity providers)
+github_auth_mode = "access_key"
+
+# oidc mode only: set false if the account already has the GitHub OIDC provider
+# create_github_oidc_provider = true
+
+# ---------------------------------------------------------------------------
+# Lowest-cost demo settings (uncomment while taking screenshots):
+# one instance per tier instead of two. Keeps every component, loses
+# redundancy. Change back to 2 for the high-availability screenshots.
+# ---------------------------------------------------------------------------
+# web_min_size         = 1
+# web_desired_capacity = 1
+# app_min_size         = 1
+# app_desired_capacity = 1
+
+# High availability for the database (doubles its cost)
+# db_multi_az = true
+
+# Optional third-party keys (stored in AWS Secrets Manager)
+# stripe_secret_key = "sk_test_..."
+# google_client_id  = ""
+# resend_api_key    = ""
+# email_from        = "OccasionHub <no-reply@yourdomain.com>"

@@ -1,0 +1,92 @@
+# ---------------------------------------------------------------------------
+# OccasionHub: local multi-service run of all three tiers
+#
+#   browser -> proxy (Nginx, :8080) -> client (Next.js)           web tier
+#                                   -> server (Express, /backend)  app tier
+#                                       -> db (PostgreSQL+PostGIS)  data tier
+#
+# Networks mirror the cloud segmentation: the database is only on "data",
+# which the web tier cannot reach.
+#
+#   cp .env.example .env      # then edit the values
+#   docker compose up --build
+#   open http://localhost:8080
+# ---------------------------------------------------------------------------
+name: occasionhub
+
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-occasionhub}
+      POSTGRES_USER: ${POSTGRES_USER:-occasionhub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  server:
+    build:
+      context: ./server
+      args:
+        APP_VERSION: local
+    image: occasionhub-server:local
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3002"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-occasionhub}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-occasionhub}?connection_limit=5
+      DATABASE_URL_UNPOOLED: postgresql://${POSTGRES_USER:-occasionhub}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-occasionhub}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      CLIENT_URL: http://localhost:8080
+      PUBLIC_API_URL: /backend
+      TRUST_PROXY: "1"
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+    volumes:
+      - uploads:/app/uploads
+    networks: [app, data]
+
+  client:
+    build:
+      context: ./client
+      args:
+        NEXT_PUBLIC_API_URL: /backend
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN:-}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+    image: occasionhub-client:local
+    restart: unless-stopped
+    environment:
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+    networks: [web]
+
+  proxy:
+    build: ./proxy
+    image: occasionhub-proxy:local
+    restart: unless-stopped
+    depends_on: [client, server]
+    environment:
+      CLIENT_UPSTREAM: client:3000
+      API_UPSTREAM: server:3002
+      NGINX_RESOLVER: 127.0.0.11
+    ports:
+      - "8080:8080"
+    networks: [web, app]
+
+networks:
+  web: {}    # proxy <-> client
+  app: {}    # proxy <-> server
+  data: {}   # server <-> db   (the web tier is not attached)
+
+volumes:
+  db-data: {}
+  uploads: {}

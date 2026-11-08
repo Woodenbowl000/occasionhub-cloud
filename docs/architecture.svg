@@ -1,0 +1,284 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1720 1125" width="1720" height="1125" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#232F3E"/>
+    </marker>
+    <marker id="arrg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#6B7280"/>
+    </marker>
+    <marker id="arro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#C2410C"/>
+    </marker>
+    <style>
+      .t  { font-size: 13px; fill: #111827; }
+      .ts { font-size: 11.5px; fill: #374151; }
+      .tb { font-size: 13px; font-weight: 700; fill: #111827; }
+      .th { font-size: 15px; font-weight: 700; fill: #111827; }
+      .lbl { font-size: 11px; fill: #374151; }
+      .box { fill: #FFFFFF; stroke-width: 1.6; }
+      .flow { stroke: #232F3E; stroke-width: 1.8; fill: none; }
+      .mgmt { stroke: #6B7280; stroke-width: 1.4; fill: none; stroke-dasharray: 6 4; }
+      .ci   { stroke: #C2410C; stroke-width: 1.8; fill: none; stroke-dasharray: 8 4; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1720" height="1125" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="20" y="34" font-size="22" font-weight="700" fill="#111827">OccasionHub on AWS: three-tier architecture with CI/CD</text>
+  <text x="20" y="56" class="ts">Region ap-southeast-2 (Sydney) · VPC 10.0.0.0/16 · 2 Availability Zones · all infrastructure defined in Terraform</text>
+
+  <!-- Users -->
+  <rect x="790" y="66" width="200" height="40" rx="8" class="box" stroke="#111827"/>
+  <text x="890" y="91" text-anchor="middle" class="tb">Users (web browser)</text>
+
+  <!-- ===================== CI/CD lane ===================== -->
+  <rect x="20" y="125" width="285" height="985" rx="10" fill="#FFF7ED" stroke="#C2410C" stroke-width="1.6"/>
+  <text x="36" y="150" class="th">CI/CD (GitHub)</text>
+
+  <rect x="40" y="165" width="245" height="44" rx="8" class="box" stroke="#374151"/>
+  <text x="162" y="192" text-anchor="middle" class="t">Developer: git push / pull request</text>
+
+  <rect x="40" y="235" width="245" height="56" rx="8" class="box" stroke="#374151"/>
+  <text x="162" y="258" text-anchor="middle" class="tb">GitHub repository</text>
+  <text x="162" y="278" text-anchor="middle" class="ts">app code, Dockerfiles, Terraform</text>
+  <path d="M162 209V233" class="flow" marker-end="url(#arr)"/>
+
+  <rect x="40" y="317" width="245" height="420" rx="8" fill="#FFFFFF" stroke="#C2410C" stroke-width="1.6"/>
+  <text x="162" y="340" text-anchor="middle" class="tb">GitHub Actions: deploy.yml</text>
+  <path d="M162 291V315" class="flow" marker-end="url(#arr)"/>
+
+  <rect x="56" y="354" width="213" height="68" rx="6" fill="#FFF7ED" stroke="#FDBA74"/>
+  <text x="66" y="374" class="tb">1  test</text>
+  <text x="66" y="392" class="ts">type-check, Prisma migrate,</text>
+  <text x="66" y="408" class="ts">API tests vs PostGIS service</text>
+
+  <rect x="56" y="432" width="213" height="68" rx="6" fill="#FFF7ED" stroke="#FDBA74"/>
+  <text x="66" y="452" class="tb">2  e2e</text>
+  <text x="66" y="470" class="ts">docker compose up (4 services),</text>
+  <text x="66" y="486" class="ts">smoke test through Nginx</text>
+
+  <rect x="56" y="510" width="213" height="68" rx="6" fill="#FFF7ED" stroke="#FDBA74"/>
+  <text x="66" y="530" class="tb">3  build &amp; push (main)</text>
+  <text x="66" y="548" class="ts">client, proxy, server images</text>
+  <text x="66" y="564" class="ts">tagged with the git SHA → ECR</text>
+
+  <rect x="56" y="588" width="213" height="136" rx="6" fill="#FFF7ED" stroke="#FDBA74"/>
+  <text x="66" y="608" class="tb">4  deploy (main)</text>
+  <text x="66" y="626" class="ts">write SHA to SSM image-tag</text>
+  <text x="66" y="642" class="ts">instance refresh, both ASGs</text>
+  <text x="66" y="658" class="ts">(rolling, ≥50% healthy)</text>
+  <text x="66" y="674" class="ts">smoke test /backend/health</text>
+  <text x="66" y="690" class="ts">version = SHA, else</text>
+  <text x="66" y="706" class="ts">automatic rollback</text>
+
+  <path d="M162 422V430" class="flow" marker-end="url(#arr)"/>
+  <path d="M162 500V508" class="flow" marker-end="url(#arr)"/>
+  <path d="M162 578V586" class="flow" marker-end="url(#arr)"/>
+
+  <rect x="40" y="760" width="245" height="64" rx="8" class="box" stroke="#DD344C"/>
+  <text x="162" y="783" text-anchor="middle" class="tb">Deploy-only CI identity</text>
+  <text x="162" y="801" text-anchor="middle" class="ts">keys in encrypted GitHub env</text>
+  <text x="162" y="816" text-anchor="middle" class="ts">secrets, main branch only</text>
+  <path d="M162 737V758" class="flow" marker-end="url(#arr)"/>
+
+  <!-- Legend -->
+  <text x="40" y="866" class="tb">Legend</text>
+  <path d="M40 888H100" class="flow" marker-end="url(#arr)"/>
+  <text x="110" y="892" class="ts">user request path</text>
+  <path d="M40 914H100" class="mgmt" marker-end="url(#arrg)"/>
+  <text x="110" y="918" class="ts">outbound / replication</text>
+  <path d="M40 940H100" class="ci" marker-end="url(#arro)"/>
+  <text x="110" y="944" class="ts">CI/CD deployment actions</text>
+  <rect x="40" y="958" width="26" height="16" fill="#E8F5E9" stroke="#43A047"/>
+  <text x="74" y="971" class="ts">public subnet</text>
+  <rect x="40" y="982" width="26" height="16" fill="#E3F2FD" stroke="#1E88E5"/>
+  <text x="74" y="995" class="ts">private subnet (via NAT)</text>
+  <rect x="40" y="1006" width="26" height="16" fill="#F3E5F5" stroke="#8E24AA"/>
+  <text x="74" y="1019" class="ts">isolated subnet (no internet)</text>
+  <rect x="40" y="1030" width="26" height="16" fill="none" stroke="#ED7100" stroke-dasharray="5 3"/>
+  <text x="74" y="1043" class="ts">Auto Scaling Group</text>
+
+  <!-- ===================== AWS cloud ===================== -->
+  <rect x="320" y="125" width="1385" height="985" rx="10" fill="#FAFAFA" stroke="#232F3E" stroke-width="1.8"/>
+  <text x="336" y="150" class="th">AWS Cloud · Region ap-southeast-2 (Sydney)</text>
+
+  <!-- VPC -->
+  <rect x="340" y="190" width="980" height="870" rx="8" fill="#FFFFFF" stroke="#8C4FFF" stroke-width="2"/>
+  <text x="356" y="214" class="tb" fill="#5B21B6">VPC 10.0.0.0/16</text>
+
+  <!-- Internet gateway -->
+  <rect x="830" y="168" width="120" height="44" rx="8" class="box" stroke="#8C4FFF"/>
+  <text x="890" y="195" text-anchor="middle" class="tb">Internet GW</text>
+  <path d="M890 106V166" class="flow" marker-end="url(#arr)"/>
+  <text x="898" y="140" class="lbl">HTTP</text>
+
+  <!-- AZ columns -->
+  <rect x="355" y="228" width="465" height="672" rx="8" fill="none" stroke="#2563EB" stroke-dasharray="7 5" stroke-width="1.3"/>
+  <text x="370" y="246" class="ts" fill="#1D4ED8">Availability Zone A (ap-southeast-2a)</text>
+  <rect x="840" y="228" width="465" height="672" rx="8" fill="none" stroke="#2563EB" stroke-dasharray="7 5" stroke-width="1.3"/>
+  <text x="1290" y="246" text-anchor="end" class="ts" fill="#1D4ED8">Availability Zone B (ap-southeast-2b)</text>
+
+  <!-- Public subnets -->
+  <rect x="370" y="254" width="435" height="106" rx="6" fill="#E8F5E9" stroke="#43A047"/>
+  <text x="380" y="354" class="lbl">Public subnet 10.0.1.0/24</text>
+  <rect x="855" y="254" width="435" height="106" rx="6" fill="#E8F5E9" stroke="#43A047"/>
+  <text x="1280" y="270" text-anchor="end" class="lbl">Public subnet 10.0.2.0/24</text>
+
+  <rect x="384" y="284" width="150" height="58" rx="8" class="box" stroke="#8C4FFF"/>
+  <text x="459" y="308" text-anchor="middle" class="tb">NAT gateway</text>
+  <text x="459" y="326" text-anchor="middle" class="ts">+ Elastic IP</text>
+
+  <rect x="600" y="282" width="580" height="60" rx="8" class="box" stroke="#8C4FFF" stroke-width="2"/>
+  <text x="890" y="306" text-anchor="middle" class="tb">Application Load Balancer (internet-facing)</text>
+  <text x="890" y="325" text-anchor="middle" class="ts">listener :80 → target group web-tg · health check /healthz</text>
+  <path d="M890 212V280" class="flow" marker-end="url(#arr)"/>
+
+  <!-- NAT outbound -->
+  <path d="M459 284V222H828" class="mgmt" marker-end="url(#arrg)"/>
+  <text x="470" y="217" class="lbl">outbound only: image pulls, AWS APIs</text>
+
+  <!-- Web subnets -->
+  <rect x="370" y="380" width="435" height="150" rx="6" fill="#E3F2FD" stroke="#1E88E5"/>
+  <text x="380" y="396" class="lbl">Web subnet (private) 10.0.11.0/24</text>
+  <rect x="855" y="380" width="435" height="150" rx="6" fill="#E3F2FD" stroke="#1E88E5"/>
+  <text x="1280" y="396" text-anchor="end" class="lbl">Web subnet (private) 10.0.12.0/24</text>
+
+  <rect x="455" y="406" width="750" height="116" rx="8" fill="none" stroke="#ED7100" stroke-dasharray="6 4" stroke-width="1.5"/>
+  <text x="830" y="514" text-anchor="middle" class="ts" fill="#9A3412">ASG web-asg · min 2 / max 4 · target CPU 50% and 1000 req/instance</text>
+
+  <rect x="480" y="416" width="230" height="78" rx="8" class="box" stroke="#ED7100"/>
+  <text x="595" y="436" text-anchor="middle" class="tb">EC2 t3.micro (web)</text>
+  <text x="595" y="454" text-anchor="middle" class="ts">container: Nginx proxy :80</text>
+  <text x="595" y="470" text-anchor="middle" class="ts">container: Next.js :3000</text>
+  <text x="595" y="486" text-anchor="middle" class="ts">SG web-sg</text>
+
+  <rect x="950" y="416" width="230" height="78" rx="8" class="box" stroke="#ED7100"/>
+  <text x="1065" y="436" text-anchor="middle" class="tb">EC2 t3.micro (web)</text>
+  <text x="1065" y="454" text-anchor="middle" class="ts">container: Nginx proxy :80</text>
+  <text x="1065" y="470" text-anchor="middle" class="ts">container: Next.js :3000</text>
+  <text x="1065" y="486" text-anchor="middle" class="ts">SG web-sg</text>
+
+  <path d="M640 342V414" class="flow" marker-end="url(#arr)"/>
+  <path d="M1110 342V414" class="flow" marker-end="url(#arr)"/>
+  <text x="648" y="374" class="lbl">:80</text>
+  <text x="1118" y="374" class="lbl">:80</text>
+
+  <!-- App subnets -->
+  <rect x="370" y="550" width="435" height="190" rx="6" fill="#E3F2FD" stroke="#1E88E5"/>
+  <text x="380" y="566" class="lbl">App subnet (private) 10.0.21.0/24</text>
+  <rect x="855" y="550" width="435" height="190" rx="6" fill="#E3F2FD" stroke="#1E88E5"/>
+  <text x="1280" y="566" text-anchor="end" class="lbl">App subnet (private) 10.0.22.0/24</text>
+
+  <rect x="600" y="576" width="580" height="50" rx="8" class="box" stroke="#8C4FFF" stroke-width="2"/>
+  <text x="890" y="597" text-anchor="middle" class="tb">Internal Application Load Balancer</text>
+  <text x="890" y="615" text-anchor="middle" class="ts">listener :80 → target group app-tg :3002 · health check /health</text>
+
+  <path d="M640 494V574" class="flow" marker-end="url(#arr)"/>
+  <path d="M1110 494V574" class="flow" marker-end="url(#arr)"/>
+  <text x="648" y="543" class="lbl">/backend/*</text>
+  <text x="1118" y="543" class="lbl">/backend/*</text>
+
+  <rect x="455" y="636" width="750" height="98" rx="8" fill="none" stroke="#ED7100" stroke-dasharray="6 4" stroke-width="1.5"/>
+  <text x="830" y="727" text-anchor="middle" class="ts" fill="#9A3412">ASG app-asg · min 2 / max 4 · target CPU 50%</text>
+
+  <rect x="480" y="644" width="230" height="64" rx="8" class="box" stroke="#ED7100"/>
+  <text x="595" y="664" text-anchor="middle" class="tb">EC2 t3.micro (app)</text>
+  <text x="595" y="682" text-anchor="middle" class="ts">container: Express + Prisma</text>
+  <text x="595" y="698" text-anchor="middle" class="ts">:3002 · SG app-sg</text>
+
+  <rect x="950" y="644" width="230" height="64" rx="8" class="box" stroke="#ED7100"/>
+  <text x="1065" y="664" text-anchor="middle" class="tb">EC2 t3.micro (app)</text>
+  <text x="1065" y="682" text-anchor="middle" class="ts">container: Express + Prisma</text>
+  <text x="1065" y="698" text-anchor="middle" class="ts">:3002 · SG app-sg</text>
+
+  <path d="M640 626V642" class="flow" marker-end="url(#arr)"/>
+  <path d="M1110 626V642" class="flow" marker-end="url(#arr)"/>
+
+  <!-- S3 gateway endpoint straddling the VPC edge -->
+  <rect x="1236" y="650" width="128" height="52" rx="8" class="box" stroke="#7AA116"/>
+  <text x="1300" y="672" text-anchor="middle" class="tb">S3 gateway</text>
+  <text x="1300" y="690" text-anchor="middle" class="ts">VPC endpoint</text>
+  <path d="M1180 676H1234" class="flow" marker-end="url(#arr)"/>
+
+  <!-- DB subnets -->
+  <rect x="370" y="760" width="435" height="128" rx="6" fill="#F3E5F5" stroke="#8E24AA"/>
+  <text x="380" y="776" class="lbl">DB subnet (isolated) 10.0.31.0/24</text>
+  <rect x="855" y="760" width="435" height="128" rx="6" fill="#F3E5F5" stroke="#8E24AA"/>
+  <text x="1280" y="776" text-anchor="end" class="lbl">DB subnet (isolated) 10.0.32.0/24</text>
+
+  <rect x="480" y="800" width="230" height="74" rx="8" class="box" stroke="#C925D1" stroke-width="2"/>
+  <text x="595" y="822" text-anchor="middle" class="tb">RDS PostgreSQL 16</text>
+  <text x="595" y="840" text-anchor="middle" class="ts">PostGIS + pg_trgm · encrypted</text>
+  <text x="595" y="856" text-anchor="middle" class="ts">TLS forced · not public · db-sg</text>
+
+  <rect x="950" y="800" width="230" height="74" rx="8" fill="#FFFFFF" stroke="#C925D1" stroke-dasharray="6 4" stroke-width="1.6"/>
+  <text x="1065" y="830" text-anchor="middle" class="tb">RDS standby (optional)</text>
+  <text x="1065" y="848" text-anchor="middle" class="ts">db_multi_az = true</text>
+
+  <path d="M710 837H948" class="mgmt" marker-end="url(#arrg)"/>
+  <text x="829" y="830" text-anchor="middle" class="lbl">synchronous replication</text>
+
+  <path d="M595 708V798" class="flow" marker-end="url(#arr)"/>
+  <path d="M1020 708V750H660V798" class="flow" marker-end="url(#arr)"/>
+  <text x="588" y="792" text-anchor="end" class="lbl">:5432 TLS</text>
+
+  <!-- Security groups and routing summary -->
+  <rect x="355" y="912" width="950" height="136" rx="8" fill="#FFFFFF" stroke="#DD344C" stroke-width="1.4"/>
+  <text x="370" y="934" class="tb" fill="#9F1239">Security groups (one per tier, each allows only the previous hop; no SSH anywhere)</text>
+  <text x="370" y="956" class="ts">alb-public-sg: in 80 from 0.0.0.0/0 · out 80 to web-sg</text>
+  <text x="370" y="974" class="ts">web-sg: in 80 from alb-public-sg · out 80 to alb-internal-sg, 443 out (NAT)</text>
+  <text x="370" y="992" class="ts">alb-internal-sg: in 80 from web-sg · out 3002 to app-sg</text>
+  <text x="840" y="956" class="ts">app-sg: in 3002 from alb-internal-sg · out 5432 to db-sg, 443 out</text>
+  <text x="840" y="974" class="ts">db-sg: in 5432 from app-sg only · no outbound rules</text>
+  <text x="370" y="1018" class="tb" fill="#9F1239">Route tables</text>
+  <text x="470" y="1018" class="ts">public: 0.0.0.0/0 → IGW · web + app: 0.0.0.0/0 → NAT, S3 → endpoint · db: VPC-local only</text>
+  <text x="370" y="1038" class="ts">VPC flow logs (all traffic) → CloudWatch Logs · instances managed via SSM Session Manager</text>
+
+  <!-- ===================== Regional managed services ===================== -->
+  <text x="1385" y="186" class="tb">Managed services</text>
+
+  <rect x="1385" y="200" width="300" height="56" rx="8" class="box" stroke="#ED7100"/>
+  <text x="1400" y="222" class="tb">Amazon ECR</text>
+  <text x="1400" y="242" class="ts">client · proxy · server (immutable tags, scan)</text>
+
+  <rect x="1385" y="268" width="300" height="56" rx="8" class="box" stroke="#E7157B"/>
+  <text x="1400" y="290" class="tb">SSM Parameter Store</text>
+  <text x="1400" y="310" class="ts">/occasionhub/image-tag (release pointer)</text>
+
+  <rect x="1385" y="336" width="300" height="56" rx="8" class="box" stroke="#DD344C"/>
+  <text x="1400" y="358" class="tb">AWS Secrets Manager</text>
+  <text x="1400" y="378" class="ts">db credentials · JWT/API keys · web keys</text>
+
+  <rect x="1385" y="404" width="300" height="56" rx="8" class="box" stroke="#E7157B"/>
+  <text x="1400" y="426" class="tb">Amazon CloudWatch</text>
+  <text x="1400" y="446" class="ts">container logs · 6 alarms · dashboard</text>
+
+  <rect x="1385" y="472" width="300" height="56" rx="8" class="box" stroke="#E7157B"/>
+  <text x="1400" y="494" class="tb">Amazon SNS</text>
+  <text x="1400" y="514" class="ts">alarm emails to the operator</text>
+
+  <rect x="1385" y="540" width="300" height="56" rx="8" class="box" stroke="#7AA116"/>
+  <text x="1400" y="562" class="tb">AWS Budgets</text>
+  <text x="1400" y="582" class="ts">billing alerts at 50/80/100% + forecast</text>
+
+  <rect x="1385" y="640" width="300" height="72" rx="8" class="box" stroke="#7AA116" stroke-width="2"/>
+  <text x="1400" y="662" class="tb">Amazon S3 (venue photos)</text>
+  <text x="1400" y="682" class="ts">private · versioned · SSE · TLS-only</text>
+  <text x="1400" y="700" class="ts">served through the API, cached by Nginx</text>
+  <path d="M1364 676H1383" class="flow" marker-end="url(#arr)"/>
+
+  <rect x="1385" y="760" width="300" height="72" rx="8" class="box" stroke="#DD344C"/>
+  <text x="1400" y="782" class="tb">AWS IAM</text>
+  <text x="1400" y="802" class="ts">least-privilege instance roles per tier</text>
+  <text x="1400" y="820" class="ts">CI user: push images, deploy only</text>
+
+  <text x="1400" y="868" class="ts">Instances read the image tag (SSM), pull</text>
+  <text x="1400" y="886" class="ts">images (ECR) and secrets (Secrets</text>
+  <text x="1400" y="904" class="ts">Manager) at boot, and ship logs to</text>
+  <text x="1400" y="922" class="ts">CloudWatch, all via their IAM role.</text>
+
+  <!-- CI/CD path to AWS -->
+  <path d="M162 824V844H312V1085H1665V834" class="ci" marker-end="url(#arro)"/>
+  <text x="560" y="1078" class="ts" fill="#9A3412">CI identity → push images to ECR · write image tag to SSM · start instance refresh on both ASGs</text>
+</svg>
